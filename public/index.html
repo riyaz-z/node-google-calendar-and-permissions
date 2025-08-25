@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>User Permissions</title>
+    <style>
+      body {
+        background-color: #f5f6f5;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        min-height: 100vh;
+        font-family: "Arial", sans-serif;
+        color: #333;
+      }
+      #app {
+        background-color: #fff;
+        padding: 20px;
+        border-radius: 4px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        width: 100%;
+        max-width: 400px;
+      }
+      h2 {
+        font-size: 1.5em;
+        font-weight: bold;
+        margin-bottom: 15px;
+        color: #1a3c34;
+      }
+      h3 {
+        font-size: 1.2em;
+        font-weight: bold;
+        margin: 15px 0 10px;
+        color: #1a3c34;
+      }
+      label {
+        display: block;
+        margin-bottom: 5px;
+        font-size: 0.9em;
+        color: #555;
+      }
+      select {
+        width: 100%;
+        padding: 8px 30px 8px 10px;
+        margin-bottom: 15px;
+        border: 1px solid #ccc;
+        border-radius: 3px;
+        font-size: 0.9em;
+        background-size: 16px;
+        -webkit-appearance: none;
+        -moz-appearance: none;
+        appearance: none;
+      }
+      select:focus {
+        outline: none;
+        border-color: #007bff;
+        box-shadow: 0 0 3px rgba(0, 123, 255, 0.3);
+      }
+      button {
+        width: 100%;
+        padding: 10px;
+        border: none;
+        border-radius: 3px;
+        font-size: 0.9em;
+        cursor: pointer;
+        background-color: #007bff;
+        color: #fff;
+        transition: background-color 0.2s;
+      }
+      button:hover {
+        background-color: #0056b3;
+      }
+      #map-btn {
+        background-color: #28a745;
+      }
+      #map-btn:hover {
+        background-color: #218838;
+      }
+      #logout-btn {
+        background-color: #dc3545;
+        margin-top: 10px;
+      }
+      #logout-btn:hover {
+        background-color: #c82333;
+      }
+      .hidden {
+        display: none;
+      }
+      ul {
+        list-style: disc;
+        padding-left: 20px;
+        margin-bottom: 15px;
+      }
+      p,
+      li {
+        font-size: 0.9em;
+        margin-bottom: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <div id="login-section">
+        <h2>Login</h2>
+        <div>
+          <label>Select User</label>
+          <select id="user-select">
+            <option value="">Select a user</option>
+          </select>
+        </div>
+        <button id="login-btn">Login</button>
+      </div>
+
+      <div id="permissions-section" class="hidden">
+        <h2>Your Permissions</h2>
+        <p><strong>User:</strong> <span id="user-email"></span></p>
+        <p><strong>Role:</strong> <span id="user-role"></span></p>
+        <p><strong>Permissions:</strong></p>
+        <ul>
+          <li>Read: <span id="can-read"></span></li>
+          <li>Write: <span id="can-write"></span></li>
+          <li>Delete: <span id="can-delete"></span></li>
+        </ul>
+        <button id="logout-btn">Logout</button>
+
+        <div id="admin-section" class="hidden">
+          <h3>Manage User Roles</h3>
+          <div>
+            <label>Select User</label>
+            <select id="manage-user-select">
+              <option value="">Select User</option>
+            </select>
+          </div>
+          <div>
+            <label>Select Role</label>
+            <select id="role-select">
+              <option value="">Select Role</option>
+            </select>
+          </div>
+          <button id="map-btn">Map User to Role</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const loginSection = document.getElementById("login-section");
+      const permissionsSection = document.getElementById("permissions-section");
+      const adminSection = document.getElementById("admin-section");
+      const loginBtn = document.getElementById("login-btn");
+      const userSelect = document.getElementById("user-select");
+      const userEmail = document.getElementById("user-email");
+      const userRole = document.getElementById("user-role");
+      const canRead = document.getElementById("can-read");
+      const canWrite = document.getElementById("can-write");
+      const canDelete = document.getElementById("can-delete");
+      const manageUserSelect = document.getElementById("manage-user-select");
+      const roleSelect = document.getElementById("role-select");
+      const mapBtn = document.getElementById("map-btn");
+      const logoutBtn = document.getElementById("logout-btn");
+
+      async function loadUsers() {
+        try {
+          const res = await fetch("http://localhost:3000/permissions/users");
+          const data = await res.json();
+          if (data.data.result === "Success") {
+            userSelect.innerHTML = '<option value="">Select a user</option>';
+            data.data.data.forEach((user) => {
+              const option = document.createElement("option");
+              option.value = user;
+              option.textContent = user;
+              userSelect.appendChild(option);
+            });
+          } else {
+            alert(`Failed to load users: ${data.data.message}`);
+          }
+        } catch (err) {
+          alert(`Error loading users: ${err.message}`);
+        }
+      }
+
+      loadUsers();
+
+      loginBtn.addEventListener("click", async () => {
+        const email = userSelect.value;
+        if (!email) {
+          alert("Please select a user");
+          return;
+        }
+
+        try {
+          const loginRes = await fetch(
+            "http://localhost:3000/permissions/login",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ email }),
+            }
+          );
+          const loginData = await loginRes.json();
+          if (loginData.data.result !== "Success") {
+            alert(loginData.data.message);
+            return;
+          }
+
+          const permRes = await fetch(
+            `http://localhost:3000/permissions/${email}`
+          );
+          const permData = await permRes.json();
+          if (permData.data.result !== "Success") {
+            alert(permData.data.message);
+            return;
+          }
+
+          loginSection.classList.add("hidden");
+          permissionsSection.classList.remove("hidden");
+          userEmail.textContent = email;
+          userRole.textContent = permData.data.data.role_name;
+          canRead.textContent = permData.data.data.can_read ? "Yes" : "No";
+          canWrite.textContent = permData.data.data.can_write ? "Yes" : "No";
+          canDelete.textContent = permData.data.data.can_delete ? "Yes" : "No";
+
+          if (permData.data.data.role_name === "Admin") {
+            adminSection.classList.remove("hidden");
+            await loadManageUsersAndRoles();
+          }
+        } catch (err) {
+          alert(`Error: ${err.message}`);
+        }
+      });
+
+      async function loadManageUsersAndRoles() {
+        try {
+          const usersRes = await fetch(
+            "http://localhost:3000/permissions/users"
+          );
+          const usersData = await usersRes.json();
+          if (usersData.data.result === "Success") {
+            manageUserSelect.innerHTML =
+              '<option value="">Select User</option>';
+            const loggedInUser = userEmail.textContent;
+            usersData.data.data.forEach((user) => {
+              if (user !== loggedInUser) {
+                const option = document.createElement("option");
+                option.value = user;
+                option.textContent = user;
+                manageUserSelect.appendChild(option);
+              }
+            });
+          } else {
+            alert(`Failed to load users: ${usersData.data.message}`);
+          }
+
+          const rolesRes = await fetch(
+            "http://localhost:3000/permissions/roles"
+          );
+          const rolesData = await rolesRes.json();
+          if (rolesData.data.result === "Success") {
+            roleSelect.innerHTML = '<option value="">Select Role</option>';
+            rolesData.data.data.forEach((role) => {
+              const option = document.createElement("option");
+              option.value = role.role_pk;
+              option.textContent = role.role_name;
+              roleSelect.appendChild(option);
+            });
+          } else {
+            alert(`Failed to load roles: ${rolesData.data.message}`);
+          }
+        } catch (err) {
+          alert(`Error loading users/roles: ${err.message}`);
+        }
+      }
+
+      mapBtn.addEventListener("click", async () => {
+        const email = manageUserSelect.value;
+        const role_fk = roleSelect.value;
+        if (!email || !role_fk) {
+          alert("Please select a user and role");
+          return;
+        }
+
+        try {
+          const res = await fetch(
+            "http://localhost:3000/permissions/map-user-role",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ email, role_fk }),
+            }
+          );
+          const data = await res.json();
+          if (data.data.result === "Success") {
+            alert(data.data.message);
+          } else {
+            alert(data.data.message);
+          }
+        } catch (err) {
+          alert(`Error mapping user: ${err.message}`);
+        }
+      });
+
+      logoutBtn.addEventListener("click", () => {
+        permissionsSection.classList.add("hidden");
+        adminSection.classList.add("hidden");
+        loginSection.classList.remove("hidden");
+        userSelect.value = "";
+        userEmail.textContent = "";
+        userRole.textContent = "";
+        canRead.textContent = "";
+        canWrite.textContent = "";
+        canDelete.textContent = "";
+        manageUserSelect.innerHTML = '<option value="">Select User</option>';
+        roleSelect.innerHTML = '<option value="">Select Role</option>';
+      });
+    </script>
+  </body>
+</html>

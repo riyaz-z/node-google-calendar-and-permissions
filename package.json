@@ -1,0 +1,23 @@
+{
+  "name": "google-calendar-api",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node app.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@googleapis/calendar": "^11.0.1",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.1",
+    "express": "^5.1.0",
+    "google-auth-library": "^10.2.1",
+    "joi": "^18.0.1",
+    "pg": "^8.16.3",
+    "winston": "^3.17.0"
+  }
+}
